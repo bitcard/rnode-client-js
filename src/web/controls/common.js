@@ -1,4 +1,5 @@
 import * as R from 'ramda'
+import m from 'mithril'
 
 // Common styles
 
@@ -24,6 +25,14 @@ export const showRevDecimal = amount => {
     return trimZeroes(`${prefix}.${suffix}`)
   }
 }
+
+export const labelRev = amount =>
+  amount && m('span.rev', amount, m('b', ' REV'))
+
+export const showNetworkError = errMessage =>
+  errMessage == 'Failed to fetch'
+    ? `${errMessage}: select a running RNode from the above selector.`
+    : errMessage
 
 // State cell
 export const mkCell = () => {
@@ -60,4 +69,43 @@ export const mkCell = () => {
     // Set event (on-change) listener
     setListener: f => { _listener = f },
   }
+}
+
+// Wraps Virtual DOM renderer to render state
+export const makeRenderer = (element, view) => (state, deps) => {
+  const stateCell = mkCell()
+  const render = () => {
+    m.render(element, view(stateCell, deps))
+  }
+  stateCell.setListener(render)
+  stateCell.set(state)
+}
+
+export const pageLog = ({log, document}) => {
+  // Page logger
+  const logEL = document.querySelector('#log')
+  const logWrap = (...args) => {
+    const lines = Array.from(args).map(x => {
+      const f = (_, v) => v && v.buffer instanceof ArrayBuffer
+        ? Array.from(v).toString() : v
+      return JSON.stringify(x, f, 2).replace(/\\n/g, '<br/>')
+    })
+    const el = document.createElement('pre')
+    el.innerHTML = lines.join(' ')
+    logEL.prepend(el)
+    log(...args)
+  }
+  return logWrap
+}
+
+export const handleHashHref = pageBody => {
+  // Prevents default redirect for link <a href="#">
+  pageBody.addEventListener('click', ev => {
+    const target = ev.target
+    const isHrefHash = target
+      && target.nodeName === 'A'
+      && target.attributes['href'].value === '#'
+
+    if (isHrefHash) ev.preventDefault()
+  })
 }
